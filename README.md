@@ -2,6 +2,8 @@
 
 Evidence Review is an Atlassian Forge app built for Codegeist 2026. A Rovo agent collects evidence from Confluence and prepares a Jira comment that cites the exact page, version and quote. Nothing is published until a person reviews the destination, comment and citation in the issue panel and approves one attempt.
 
+**Demo video (3:26):** https://youtu.be/x6fWbFeRvg8 — a complete run on a development site with synthetic records, recorded on 13 November 2026.
+
 - Before approval: the issue panel shows the canonical draft and its citation.
 - Approval is bound to the user, the installation, the issue and the draft, and it expires after 15 minutes.
 - Execution re-checks the evidence before posting; changed, expired, revoked or already used approvals are rejected without posting.
