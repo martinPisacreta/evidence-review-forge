@@ -1,0 +1,187 @@
+# Release candidate: explicit input rejections and serialized JSON guidance.
+# Previous site-tested version: 2.6.0. Forge assigns the next version at deploy.
+modules:
+  trigger:
+    - key: initialize-evidence-store
+      function: initialize-store-fn
+      events:
+        - avi:forge:installed:app
+        - avi:forge:upgraded:app
+  jira:issuePanel:
+    - key: evidence-review-approval-panel
+      resource: approval-panel
+      resolver:
+        function: approval-panel-resolver
+      render: native
+      title: Evidence Review approval
+      icon: https://developer.atlassian.com/platform/forge/images/icons/issue-panel-icon.svg
+  rovo:agent:
+    - key: evidence-review-agent
+      name: Evidence Review Assistant
+      description: Help support agents prepare Jira responses with cited Confluence evidence for human review.
+      prompt: |
+        Help a support agent respond to a Jira issue with cited Confluence evidence.
+        When the user does not know which page to cite, use find_related_pages
+        with the Jira issue key, then collect_evidence with the chosen numeric
+        page ID. Suggested pages are not evidence until collect_evidence succeeds.
+        Ask for the Jira issue key and numeric Confluence page ID. Use collect_evidence
+        to retrieve an authorized page excerpt with its ID and version. Prepare a
+        draft response using the exact retrieved quote and version. Never invent
+        citations or paraphrase within quote. If the page does not support the
+        response, explain that and do not prepare a draft.
+        Use prepare_comment with issueKey, text, documentId, version and quote
+        to save a draft with one citation for human review. Do not build JSON or
+        supply proposalRequest. Preserve the exact retrieved quote and version.
+        Preparation does not publish a comment. The person reviews the canonical
+        proposal and citation and approves an attempt in the Jira issue panel
+        titled Evidence Review approval. Never attempt publication from this chat.
+        Use get_action_history to report approvals and recorded execution outcomes.
+        When reporting times, quote the fields ending in Iso exactly and never convert numeric timestamps yourself. Report each approval with its effectiveStatus.
+        For pending or uncertain outcomes, report uncertainty without claiming success.
+      conversationStarters:
+        - Prepare a Jira response with Confluence evidence.
+        - Help me review evidence for an issue.
+        - Show my approvals and recorded outcomes.
+      actions:
+        - find_related_pages
+        - collect_evidence
+        - prepare_comment
+        - get_action_history
+  rovo:mcp:
+    - key: evidence-review-mcp
+      name: Evidence Review
+      tools:
+        - collect_evidence
+        - prepare_comment
+        - execute_approved_comment
+        - get_action_history
+  action:
+    - key: find_related_pages
+      name: Find related pages
+      function: find-related-pages-fn
+      actionVerb: GET
+      description: >-
+        Suggest Confluence pages related to a Jira issue using Teamwork Graph.
+        Suggestions are not evidence until retrieved through collect_evidence.
+      inputs:
+        issueKey:
+          title: Issue key
+          type: string
+          required: true
+          description: Jira issue key verified with the authenticated user's permissions.
+    - key: collect_evidence
+      name: Collect evidence
+      function: collect-evidence-fn
+      actionVerb: GET
+      description: Retrieve an authorized page excerpt with its ID and version.
+      inputs:
+        documentId:
+          title: Document ID
+          type: string
+          required: true
+          description: Numeric Confluence page ID to read with the user's permissions.
+    - key: prepare_comment
+      name: Prepare comment
+      function: prepare-comment-fn
+      actionVerb: CREATE
+      description: Validate and save a draft for human review without approving or
+        posting it.
+      inputs:
+        issueKey:
+          title: Issue key
+          type: string
+          required: true
+          description: Jira issue key verified with the authenticated user's permissions.
+        text:
+          title: Comment text
+          type: string
+          required: false
+          description: Comment to save; requires documentId, version and quote.
+        documentId:
+          title: Source page ID
+          type: string
+          required: false
+          description: Retrieved Confluence page ID; requires text, version and quote.
+        version:
+          title: Source version
+          type: string
+          required: false
+          description: Retrieved page version in digits; requires text, documentId and quote.
+        quote:
+          title: Exact quote
+          type: string
+          required: false
+          description: Exact retrieved quotation; requires text, documentId and version.
+        proposalRequest:
+          title: Proposal request
+          type: string
+          required: false
+          description: Serialized draft JSON for MCP; omit all four simple inputs.
+    - key: execute_approved_comment
+      name: Execute approved comment
+      function: execute-comment-fn
+      actionVerb: CREATE
+      description: Consume an existing human approval and reserve one comment attempt
+        atomically.
+      inputs:
+        issueKey:
+          title: Issue key
+          type: string
+          required: true
+          description: Jira issue key verified with the authenticated user's permissions.
+        approvalId:
+          title: Approval ID
+          type: string
+          required: true
+          description: Approval previously created through the authenticated human panel.
+        idempotencyKey:
+          title: Idempotency key
+          type: string
+          required: true
+          description: Stable request key to reuse when checking the same execution attempt.
+    - key: get_action_history
+      name: Get action history
+      function: action-history-fn
+      actionVerb: GET
+      description: >-
+        Read approvals and outcomes for the authenticated user and installation.
+        Times include ISO 8601 UTC strings in fields ending in Iso.
+        Each approval includes effectiveStatus: consumed, revoked, expired or pending.
+  function:
+    - key: find-related-pages-fn
+      handler: index.findRelatedPages
+    - key: initialize-store-fn
+      handler: index.initializeStorage
+    - key: approval-panel-resolver
+      handler: index.approvalResolver
+    - key: collect-evidence-fn
+      handler: index.collectEvidence
+    - key: prepare-comment-fn
+      handler: index.prepareComment
+    - key: execute-comment-fn
+      handler: index.executeApprovedComment
+    - key: action-history-fn
+      handler: index.getActionHistory
+resources:
+  - key: approval-panel
+    path: src/frontend/index.jsx
+permissions:
+  scopes:
+    - read:graph:page:confluence
+    - read:graph:issue:jira
+    - read:page:confluence
+    - read:jira-work
+    - write:jira-work
+    - storage:app
+app:
+  runtime:
+    name: nodejs22.x
+  storage:
+    entities:
+      - name: evidence-state
+        attributes:
+          version:
+            type: integer
+          state:
+            type: any
+  id: ari:cloud:ecosystem::app/REPLACE-WITH-YOUR-APP-ID

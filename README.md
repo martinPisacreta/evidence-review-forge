@@ -14,6 +14,8 @@ Evidence Review is an Atlassian Forge app built for Codegeist 2026. A Rovo agent
 
 **Judge walkthrough.** [JUDGE-WALKTHROUGH.md](JUDGE-WALKTHROUGH.md) has eight steps with synthetic material and exact prompts: collect, prepare, review, approve, publish, repeat, reload and inspect the run history. It states what was run on a development installation on 18 November 2026 and what was not checked. The demo video predates the Run approved comment button: in it, publication goes through the MCP tool.
 
+**Source code.** The app source and its local tests are in [app/](app/). The tests need no Atlassian account and no installed dependencies: with Node 22, run `node --test` inside that folder (149 tests). Two identifiers tied to the author's app registration are replaced by placeholders, as [app/README.md](app/README.md) explains.
+
 **Skill for third-party agents.** [skills/evidence-review/SKILL.md](skills/evidence-review/SKILL.md) (MIT) tells an agent connected to the Atlassian MCP server how to use the app's four MCP tools: collect the Confluence evidence, prepare the cited draft, leave approval to a person in the Jira issue panel, then execute once with a stable idempotency key and check the posted comment.
 
 This repository holds the app's public policies and the support channel:
