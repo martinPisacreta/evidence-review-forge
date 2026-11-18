@@ -70,7 +70,7 @@ Use prepare_comment only for issueKey="<ISSUE_KEY>" with text equal to "To reset
 
 Rovo shows a **Please review** card listing the issue key, text, document ID, version and quote. Check them and select **Confirm selected** once.
 
-**Expected:** Rovo answers that the draft was saved for human review, that preparation does not publish, and points to the Jira issue panel **Evidence Review approval**. Inspect the issue: its comment count must remain unchanged. In the recorded run on development version 3.9.0 there was one card and one answer.
+**Expected:** Rovo answers that the draft was saved for human review, that preparation does not publish, and points to the Jira issue panel **Evidence Review approval**. Inspect the issue: its comment count must remain unchanged. In the two recorded runs on development version 3.9.0 there was one card and one answer.
 
 **If it differs:** if Rovo shows the card again or gives no answer, do not prepare a replacement: open the panel and use **Load proposal** (step 3) to see whether the draft was stored. In two earlier runs, on a version that asked Rovo for serialized JSON, the card appeared two or three times although the draft was stored. INVALID_PROPOSAL_REQUEST means the inputs were incomplete or malformed; it is not permission to publish. An unexpected comment is a failure of this preparation check.
 
@@ -126,14 +126,15 @@ Inspect **Run history** on the same issue. No agent prompt is needed.
 
 Checked by the author on a development installation, 18 November 2026, with synthetic records only:
 
-- Evidence collection, preparation with one confirmation card, and the stored draft seen through **Load proposal** on a new issue (development version 3.9.0).
+- Evidence collection, preparation with one confirmation card, and the stored draft seen through **Load proposal** on new issues (two runs, development version 3.9.0).
 - The apps-button entry path to the panel on new issues.
 - Approval without publication, one publication through **Run approved comment**, a second click, approval recovery after a page reload and a third click: one Success row and exactly one Jira comment throughout (three separate issues, development versions 3.8.0 and 3.9.0).
+- Revocation on a fourth issue (development version 3.9.0): after approving, **Revoke approval** showed "Approval revoked." and removed **Run approved comment** from the panel. After a page reload the panel did not recover the revoked approval and did not show the button. Run history stayed empty and the issue had no comment. **Load proposal** then showed the same stored draft, which would need a new approval.
 
 Not checked:
 
 - The production build on a site other than the author's development installation, including installation and permissions in both products.
-- Revoked, expired, changed-draft and uncertain outcomes through the button, and a second user identity. These are covered by automated tests of the composed application only.
+- Expired, changed-draft and uncertain outcomes through the button, and a second user identity. Because the panel removes the button after revocation, an execution attempt against a revoked approval was not made on a site either. These are covered by automated tests of the composed application only.
 - Creating the synthetic Confluence page from scratch in the same run (an existing synthetic page with the text above was used).
 
 An enabled MCP client can still call the app's tools directly; that route is described in skills/evidence-review/SKILL.md and is not needed for this walkthrough.
