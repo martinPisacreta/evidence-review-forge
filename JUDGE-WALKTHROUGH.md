@@ -122,11 +122,24 @@ Inspect **Run history** on the same issue. No agent prompt is needed.
 
 **If it differs:** record the panel text and installed version. “Run history could not be loaded. Refresh history to try again.” is an error, not an empty successful history. A successful publication and a working history panel are separate checks. Do not execute another comment to make a row appear.
 
+## Optional: start from a Teamwork Graph suggestion
+
+If you do not know which page to cite, the agent can suggest one. This needs a Confluence page that links the Jira issue (for example with a Jira issue link in its body). In Rovo, with Evidence Review Assistant selected, paste:
+
+```text
+Which Confluence pages are related to Jira issue <ISSUE_KEY>? Use find_related_pages only. Show each page title and page ID. Do not collect, prepare, approve or publish anything.
+```
+
+**Expected:** the title and page ID of each page that the Teamwork Graph relates to the issue. A suggestion is not evidence: continue with step 1 using that page ID, so the excerpt and version are retrieved before anything is prepared.
+
+**If it differs:** an empty answer means no related page was found for that issue; use a page ID you know and start at step 1. The page in the recorded run had existed for days, and how long a new link takes to appear was not measured. The lookup uses a persisted Teamwork Graph query registered for this app; it was run on the development installation only.
+
 ## What was and was not checked
 
 Checked by the author on a development installation, 18 November 2026, with synthetic records only:
 
 - Evidence collection, preparation with one confirmation card, and the stored draft seen through **Load proposal** on new issues (two runs, development version 3.9.0).
+- The whole route starting from a Teamwork Graph suggestion (19 November 2026, development version 3.9.0, an existing synthetic issue and a synthetic page that links it): `find_related_pages` returned that page, `collect_evidence` returned its version 1 and excerpt, one sentence of the excerpt was prepared with one confirmation card, approved in the panel and published with **Run approved comment**: one new Success row and exactly one new Jira comment citing that page and version.
 - The apps-button entry path to the panel on new issues.
 - Approval without publication, one publication through **Run approved comment**, a second click, approval recovery after a page reload and a third click: one Success row and exactly one Jira comment throughout (three separate issues, development versions 3.8.0 and 3.9.0).
 - Revocation on a fourth issue (development version 3.9.0): after approving, **Revoke approval** showed "Approval revoked." and removed **Run approved comment** from the panel. After a page reload the panel did not recover the revoked approval and did not show the button. Run history stayed empty and the issue had no comment. **Load proposal** then showed the same stored draft, which would need a new approval.
