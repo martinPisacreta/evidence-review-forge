@@ -1,4 +1,4 @@
-Status, 18 November 2026: these eight steps were run end to end by the author on a development installation of the app (development versions 3.8.0 and 3.9.0) with the synthetic material below. Production version 2.1.0 was built from the same source on the same day; the author has not installed that production build on a separate site, so a judge's run is the first check of it.
+Status, 18 November 2026: these eight steps were run end to end by the author on a development installation of the app (development versions 3.8.0 and 3.9.0) with the synthetic material below. Production version 2.1.0 was built from the same source on the same day. On 19 November 2026 the author installed that production build in Jira and Confluence on the same test site, next to the development installation, and ran the steps once on a new synthetic issue (collect, prepare, load, approve, publish, repeat, reload): one Success row and exactly one Jira comment. It has not been installed on a separate site, so a judge's run is the first check of a fresh installation.
 
 # Evidence Review: judge walkthrough
 
@@ -143,10 +143,11 @@ Checked by the author on a development installation, 18 November 2026, with synt
 - The apps-button entry path to the panel on new issues.
 - Approval without publication, one publication through **Run approved comment**, a second click, approval recovery after a page reload and a third click: one Success row and exactly one Jira comment throughout (three separate issues, development versions 3.8.0 and 3.9.0).
 - Revocation on a fourth issue (development version 3.9.0): after approving, **Revoke approval** showed "Approval revoked." and removed **Run approved comment** from the panel. After a page reload the panel did not recover the revoked approval and did not show the button. Run history stayed empty and the issue had no comment. **Load proposal** then showed the same stored draft, which would need a new approval.
+- The production build (version 2.1.0) installed on the author's test site, one run on 19 November 2026 on a new synthetic issue: `collect_evidence` returned the page, version 1 and the excerpt; `prepare_comment` showed the confirmation card, it was confirmed once and Rovo then showed the card a second time, which was left unconfirmed; **Load proposal** in the production panel showed the stored draft; approval showed an expiry and "No executions recorded."; **Run approved comment** showed "Comment published. Repeating returns the same execution record." and one Success row; a second click kept one Success row; after a page reload the issue had exactly one comment with its source page and version. With both installations on one site the agent selector lists several agents with the same name and the apps button lists two panels with the same title; the production panel was identified by the environment in its frame address.
 
 Not checked:
 
-- The production build on a site other than the author's development installation, including installation and permissions in both products.
+- The production build on a site other than the author's test site: a fresh installation and its permission prompts in both products.
 - Expired, changed-draft and uncertain outcomes through the button, and a second user identity. Because the panel removes the button after revocation, an execution attempt against a revoked approval was not made on a site either. These are covered by automated tests of the composed application only.
 - Creating the synthetic Confluence page from scratch in the same run (an existing synthetic page with the text above was used).
 
