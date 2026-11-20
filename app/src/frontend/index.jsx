@@ -5,54 +5,63 @@ import ForgeReconciler, { Button, Heading, Lozenge, Stack, Text } from '@forge/r
 import { invoke } from '@forge/bridge';
 import { loadProposalView } from './proposal-view.js';
 import { buildRunHistoryView } from './history-view.js';
+import { selectCurrentApproval, executionMessage, initialApprovalMessage } from './approval-view.js';
 
 function App() {
   const [review, setReview] = useState(null);
   const [approval, setApproval] = useState(null);
+  const [currentProposal, setCurrentProposal] = useState(null);
   const [busy, setBusy] = useState(false);
-  const [message, setMessage] = useState('Load the current proposal to review it.');
+  const [message, setMessage] = useState(initialApprovalMessage);
   const [history, setHistory] = useState(null);
   const [historyBusy, setHistoryBusy] = useState(false);
   const [historyError, setHistoryError] = useState('');
-  async function loadHistory() {
+  async function loadHistory(proposal = currentProposal) {
     setHistoryBusy(true);
     setHistoryError('');
     try {
       const records = await invoke('getActionHistory');
       setHistory(buildRunHistoryView(records));
-      // Recover an existing approval after reopening; never create a new one.
-      const recoverable = records.approvals.filter(candidate =>
-        candidate.effectiveStatus === 'pending' ||
-        records.comments.some(record =>
-          record.approvalId === candidate.id &&
-          record.key === `panel-approved:${candidate.id}`));
-      recoverable.sort((a, b) => b.createdAt - a.createdAt);
-      setApproval(current => current ?? (recoverable[0]
-        ? { approvalId: recoverable[0].id, expiresAt: recoverable[0].expiresAt }
-        : null));
+      // History alone cannot establish which draft is current.
+      setApproval(selectCurrentApproval(records, proposal));
     } catch {
       setHistory(null);
+      setApproval(null);
       setHistoryError('Run history could not be loaded. Refresh history to try again.');
     } finally {
       setHistoryBusy(false);
     }
   }
-  useEffect(() => { void loadHistory(); }, []);
+  useEffect(() => { void loadHistory(null); }, []);
+  useEffect(() => {
+    if (!approval) return;
+    const timer = setTimeout(() => {
+      setApproval(null);
+      setReview(null);
+      setCurrentProposal(null);
+      setMessage(initialApprovalMessage);
+    }, Math.max(0, approval.expiresAt - Date.now()));
+    return () => clearTimeout(timer);
+  }, [approval]);
   async function run(operation) {
     setBusy(true);
     try { await operation(); }
     catch {
       setReview(null);
       setApproval(null);
+      setCurrentProposal(null);
       setMessage('The operation could not be confirmed. Reload before approving.');
     } finally { setBusy(false); }
   }
   async function load() {
     setReview(null);
     setApproval(null);
+    setCurrentProposal(null);
     const result = await loadProposalView(invoke);
     setReview(result.review);
+    setCurrentProposal(result.review);
     setMessage(result.message);
+    await loadHistory(result.review);
   }
   async function approve() {
     const result = await invoke('approve', { reviewId: review.reviewId });
@@ -61,23 +70,22 @@ function App() {
     setMessage('Approval recorded. Approval does not publish; use Run approved comment to publish.');
   }
   async function executeApproved() {
+    let rejected = false;
     try {
       const result = await invoke('executeApproved', {
         approvalId: approval.approvalId
       });
-      const messages = {
-        succeeded: 'Comment published. Repeating returns the same execution record.',
-        pending: 'Execution pending. Repeating checks the same attempt.',
-        uncertain: 'Outcome uncertain. Check Jira; repeating will not send again.',
-        failed: 'Execution recorded as failed. Repeating returns the same record.'
-      };
-      setMessage(result.status === 'rejected'
-        ? `Comment not published: ${result.reason}`
-        : messages[result.status] ?? 'Outcome unconfirmed. Check Jira and run history.');
+      rejected = result?.status === 'rejected';
+      if (rejected) {
+        setApproval(null);
+        setReview(null);
+        setCurrentProposal(null);
+      }
+      setMessage(executionMessage(result));
     } catch {
       setMessage('Execution could not be confirmed. Check Jira and run history. Repeating uses the same attempt.');
     } finally {
-      await loadHistory();
+      await loadHistory(rejected ? null : currentProposal);
     }
   }
   async function revoke() {
@@ -115,7 +123,7 @@ function App() {
       </>}
       <Heading as="h2">Run history</Heading>
       <Text>Your latest 10 executions for this issue. Times are in UTC.</Text>
-      <Button isDisabled={historyBusy} onClick={loadHistory}>Refresh history</Button>
+      <Button isDisabled={historyBusy} onClick={() => loadHistory()}>Refresh history</Button>
       {historyBusy && <Text>Loading run history…</Text>}
       {historyError && <Text>{historyError}</Text>}
       {history !== null && history.length === 0 && <Text>No executions recorded.</Text>}

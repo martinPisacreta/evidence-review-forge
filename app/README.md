@@ -15,13 +15,13 @@ The tests use Node's built-in test runner and fakes only. They need no Atlassian
 node --test
 ```
 
-Checked on 18 November 2026 from a fresh copy of this folder with no `node_modules`: 149 of 149 tests pass. `npm test` runs the same command.
+Checked on 18 November 2026 from a fresh copy of this folder with no `node_modules`: 149 of 149 tests pass. Checked again on 20 November 2026 after the call-logging and approval-panel changes: 159 of 159 tests pass. `npm test` runs the same command.
 
 `npm ci` is only needed to lint or deploy with the Forge CLI. The lockfile was checked with `npm ci --dry-run`; a full install and a deploy from this copy were not performed.
 
 ## Two placeholders
 
-This source is the one deployed as production version 2.1.0 on 18 November 2026, except for two identifiers that belong to the author's app registration:
+This source is the one deployed to production on 20 November 2026 (major version 2; it adds call logging and an approval-panel fix to the build of 18 November, version 2.1.0), except for two identifiers that belong to the author's app registration:
 
 - `manifest.yml`: the app id is `REPLACE-WITH-YOUR-APP-ID`. Run `forge register` to get your own.
 - `src/product-clients.js`: `RELATED_PAGES_QUERY_KEY` is a placeholder. The related-pages lookup uses a Teamwork Graph persisted query registered for one app; to use it you must register your own query and put its key there. The tests assert the same placeholder value.
