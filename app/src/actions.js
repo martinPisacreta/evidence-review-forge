@@ -1,3 +1,4 @@
+import { logCall } from './call-log.js';
 import { hashDraft, verifyCitations } from './approval.js';
 import { commentText } from './comment-text.js';
 import { createStoreAdapter } from './store-adapter.js';
@@ -5,7 +6,7 @@ import { createStoreAdapter } from './store-adapter.js';
 // Context and clients come from the trusted backend, never chat or page text.
 // Clients must enforce resource permissions; this module performs no fetch.
 export function createActions({ storage, confluence, jira, findRelatedPages, context,
-  now = Date.now, timeoutMs = 1000 }) {
+  now = Date.now, timeoutMs = 1000, via = 'agent' }) {
   const binding = structuredClone(context);
   const present = value => typeof value === 'string' && value.trim();
   if (!['user', 'site'].every(k => present(binding?.[k])))
@@ -65,6 +66,8 @@ export function createActions({ storage, confluence, jira, findRelatedPages, con
   }
 
   async function prepare_comment(input) {
+    logCall({ event: 'prepare_comment_called', issueKey: binding.destination,
+      draftId: input?.draft?.id, via });
     requireDestination();
     const { draft } = structuredClone(input);
     const extracts = await currentEvidence(draft);
@@ -72,6 +75,8 @@ export function createActions({ storage, confluence, jira, findRelatedPages, con
   }
 
   async function execute_approved_comment(input) {
+    logCall({ event: 'execute_approved_comment_called', issueKey: binding.destination,
+      draftId: input?.draft?.id, via });
     requireDestination();
     const { key, approvalId, draft } = structuredClone(input);
     const draftHash = hashDraft(draft);

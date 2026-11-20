@@ -1,4 +1,5 @@
 import { randomUUID } from 'node:crypto';
+import { logCall } from './call-log.js';
 import { createApproval, hashDraft } from './approval.js';
 import { createActions } from './actions.js';
 import { createStoreAdapter } from './store-adapter.js';
@@ -27,7 +28,7 @@ export function createApprovalResolvers({ storage, confluence,
       throw error;
     }
     const draft = structuredClone(storedDraft);
-    const actions = createActions({ storage, confluence, context: binding,
+    const actions = createActions({ storage, confluence, context: binding, via: 'resolver',
       jira: { createComment() { throw new Error('PANEL_CANNOT_EXECUTE'); } } });
     return actions.prepare_comment({ draft });
   }
@@ -43,11 +44,13 @@ export function createApprovalResolvers({ storage, confluence,
   return {
     async getActionHistory({ context }) {
       const binding = bindingFor(context);
-      const actions = createActions({ storage, confluence, context: binding, now,
+      const actions = createActions({ storage, confluence, context: binding, via: 'resolver', now,
         jira: { createComment() { throw new Error('PANEL_CANNOT_EXECUTE'); } } });
       return actions.get_action_history();
     },
     async showDraft({ context }) {
+      logCall({ event: 'resolver_called:showDraft',
+        issueKey: context?.extension?.issue?.key, via: 'resolver' });
       const binding = bindingFor(context);
       const prepared = await prepare(context, binding, true);
       if (prepared === null) return { status: 'no_proposal' };
@@ -66,6 +69,8 @@ export function createApprovalResolvers({ storage, confluence,
       });
     },
     async approve({ payload, context }) {
+      logCall({ event: 'resolver_called:approve',
+        issueKey: context?.extension?.issue?.key, via: 'resolver' });
       const binding = bindingFor(context);
       const reviewId = payload?.reviewId;
       if (!present(reviewId)) throw new Error('INVALID_REVIEW_ID');

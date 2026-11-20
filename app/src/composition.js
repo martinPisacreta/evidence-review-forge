@@ -1,4 +1,7 @@
 import { createActions } from './actions.js';
+import { logCall } from './call-log.js';
+
+const panelInvocation = Symbol('panelInvocation');
 import { createApprovalResolvers } from './approval-resolver.js';
 import { createDraftRepository } from './draft-repository.js';
 import { policyResult } from './policy-result.js';
@@ -27,10 +30,10 @@ export function createApplication({ storage, confluence, jira,
     return { ...identity, destination };
   }
 
-  function actionsFor(binding) {
+  function actionsFor(binding, via = 'agent') {
     return createActions({ storage, confluence, jira,
       findRelatedPages: relatedPagesClient, context: binding,
-      now, timeoutMs });
+      now, timeoutMs, via });
   }
 
   async function panelContext(context) {
@@ -111,7 +114,8 @@ export function createApplication({ storage, confluence, jira,
       const binding = await issueBinding(context, payload?.issueKey);
       // Retrieve canonical content; the caller cannot substitute a draft.
       const draft = await drafts.load(binding);
-      return actionsFor(binding).execute_approved_comment({
+      return actionsFor(binding, context?.[panelInvocation] ? 'resolver' : 'agent')
+        .execute_approved_comment({
         key: payload?.idempotencyKey, approvalId: payload?.approvalId, draft
       });
     },
@@ -127,6 +131,8 @@ export function createApplication({ storage, confluence, jira,
       revoke: request => invokePanel('revoke', request),
       getActionHistory: request => invokePanel('getActionHistory', request),
       executeApproved: policyResult(async request => {
+        logCall({ event: 'resolver_called:executeApproved',
+          issueKey: request?.context?.extension?.issue?.key, via: 'resolver' });
         const context = await panelContext(request?.context);
         const approvalId = request?.payload?.approvalId;
         if (!present(approvalId))
@@ -136,7 +142,7 @@ export function createApplication({ storage, confluence, jira,
         return application.executeApprovedComment({
           issueKey: context.extension.issue.key, approvalId,
           idempotencyKey: `panel-approved:${approvalId}`
-        }, { principal: { accountId: context.accountId },
+        }, { [panelInvocation]: true, principal: { accountId: context.accountId },
           installContext: context.installContext });
       })
     }
